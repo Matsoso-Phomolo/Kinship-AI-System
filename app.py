@@ -1,7 +1,8 @@
 from flask import Flask, render_template, request
 from pyswip import Prolog
+import os
 
-app = Flask(__name__)   # 🚨 THIS LINE IS REQUIRED
+app = Flask(__name__, template_folder="templates")  # Ensure Flask knows where templates are
 
 # Load Prolog knowledge base
 prolog = Prolog()
@@ -30,16 +31,16 @@ def process_question(question):
 
     for phrase, (predicate, label) in relationships.items():
         if phrase in question:
-            person = extract_name(question)
+            person = extract_name(question).capitalize()
             query = f"{predicate}(X, {person})"
             result = list(prolog.query(query))
 
             if result:
                 answers = [r["X"].capitalize() for r in result]
                 answer_text = ", ".join(answers)
-                return f"{answer_text} is {person.capitalize()}'s {label}."
+                return f"{answer_text} is {person}'s {label}."
             else:
-                return f"No {label} found for {person.capitalize()}."
+                return f"No {label} found for {person}."
 
     return "Sorry, I don't understand the question."
 
@@ -48,10 +49,12 @@ def process_question(question):
 def index():
     answer = ""
     if request.method == "POST":
-        question = request.form["question"]
-        answer = process_question(question)
+        question = request.form.get("question")
+        if question:
+            answer = process_question(question)
     return render_template("index.html", answer=answer)
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))  # Use Render's assigned port if available
+    app.run(host="0.0.0.0", port=port)
