@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kinship AI System</title>
+</head>
+<body>
+    <h1>Kinship AI System</h1>
+    <form method="get" action="/query">
+        <input type="text" name="question" placeholder="Ask a question">
+        <button type="submit">Ask</button>
+    </form>
+
+    {% if answer %}
+        <p><strong>Answer:</strong> {{ answer }}</p>
+    {% endif %}
+</body>
+</html>
