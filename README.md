@@ -29,13 +29,14 @@ The system processes the question, queries a Prolog knowledge base (familytree.p
 
 ## Project Structure
 
-kinship-ai-system:
- - app.py
- - familytree.pl
- - requirements.txt
- - runtime.txt
- - templates/
-    * index.html
+kinship-ai-system/
+│
+├── app.py
+├── familytree.pl
+├── requirements.txt
+├── runtime.txt
+└── templates/
+    └── index.html
 
 ## How It Works
 
