@@ -36,9 +36,10 @@ def process_question(question):
             result = list(prolog.query(query))
 
             if result:
-                answers = [r["X"].capitalize() for r in result]
+                # Remove duplicates and sort
+                answers = sorted({r["X"].capitalize() for r in result})
                 answer_text = ", ".join(answers)
-                return f"{answer_text} is {person}'s {label}."
+                return f"{answer_text} is {person.capitalize()}'s {label}."
             else:
                 return f"No {label} found for {person}."
 
@@ -58,3 +59,4 @@ def index():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Use Render's assigned port if available
     app.run(host="0.0.0.0", port=port)
+
