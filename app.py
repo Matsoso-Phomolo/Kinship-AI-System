@@ -17,10 +17,7 @@ def extract_name(question):
 def process_question(question):
     question = question.lower()
 
-    # app.py
-    results = list(prolog.query("mother_of(X, simon)"))
-    print("DEBUG PROLOG MOTHER_OF SIMON:", results)
-
+    # Define relationships: predicate, label, title
     relationships = {
         "father of": ("father_of", "father", "Ntate"),
         "mother of": ("mother_of", "mother", "Mme"),
@@ -31,10 +28,10 @@ def process_question(question):
         "aunt of": ("aunt_of", "aunt", "Mme"),
         "uncle of": ("uncle_of", "uncle", "Ntate"),
         "ancestor of": ("ancestor_of", "ancestor", "")
-}
+    }
 
     # Extract the person name from the question
-    person = extract_name(question).capitalize()
+    person = question.split()[-1].replace("?", "").capitalize()
 
     # Check if the person exists in the family tree
     exists_query = list(prolog.query(f"male({person.lower()})")) + \
@@ -42,6 +39,28 @@ def process_question(question):
 
     if not exists_query:
         return f"Sorry, I don't know anyone named {person}."
+
+    # Process relationships
+    for phrase, (predicate, label, title) in relationships.items():
+        if phrase in question:
+            result = list(prolog.query(f"{predicate}(X, {person})"))
+
+            if result:
+                # Remove duplicates and capitalize names
+                answers = sorted({r["X"].capitalize() for r in result})
+
+                # Prepend title if defined
+                if title:
+                    answers = [f"{title} {name}" for name in answers]
+
+                # Return nicely formatted answer
+                return f"{', '.join(answers)} is {person}'s {label}."
+
+            else:
+                return f"No {label} found for {person}."
+
+    # If no relationship matches the question
+    return "Sorry, I don't understand the question."
 
     # Process relationships
     for phrase, (predicate, label, title) in relationships.items():
@@ -79,6 +98,7 @@ def index():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Use Render's assigned port if available
     app.run(host="0.0.0.0", port=port)
+
 
 
 
