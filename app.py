@@ -26,12 +26,12 @@ def process_question(question):
         "mother of": ("mother_of", "mother", "Mme"),
         "brother of": ("brother_of", "brother", ""),
         "sister of": ("sister_of", "sister", ""),
-        "grandmother of": ("grandmother_of", "grandmother", "Mme"),
         "grandfather of": ("grandfather_of", "grandfather", "Ntate"),
-        "aunt of": ("aunt_of", "aunt", ""),
-        "uncle of": ("uncle_of", "uncle", ""),
+        "grandmother of": ("grandmother_of", "grandmother", "Mme"),
+        "aunt of": ("aunt_of", "aunt", "Mme"),
+        "uncle of": ("uncle_of", "uncle", "Ntate"),
         "ancestor of": ("ancestor_of", "ancestor", "")
-    }
+}
 
     # Extract the person name from the question
     person = extract_name(question).capitalize()
@@ -79,6 +79,7 @@ def index():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Use Render's assigned port if available
     app.run(host="0.0.0.0", port=port)
+
 
 
 
