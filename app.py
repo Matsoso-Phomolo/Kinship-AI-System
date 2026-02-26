@@ -53,8 +53,9 @@ def process_question(question):
                 # Remove duplicates and sort
                 answers = sorted({r["X"].capitalize() for r in result})
 
-                if label in ["father", "mother"]:
-                    answer_text = f"{title} {answers[0]} is {person}'s {label}."
+                # Include title if set
+                if title:
+                    answer_text = f"{title} {', '.join(answers)} is {person}'s {label}."
                 else:
                     answer_text = f"{', '.join(answers)} is {person}'s {label}."
 
@@ -78,6 +79,7 @@ def index():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Use Render's assigned port if available
     app.run(host="0.0.0.0", port=port)
+
 
 
 
