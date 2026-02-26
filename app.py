@@ -1,107 +1,146 @@
 from flask import Flask, render_template, request
 from pyswip import Prolog
-import os
+import re
 
-app = Flask(__name__, template_folder="templates")  # Ensure Flask knows where templates are
+app = Flask(__name__)
 
-# Load Prolog knowledge base
+# Load PROLOG knowledge base
 prolog = Prolog()
 prolog.consult("familytree.pl")
 
+# ---------------------------
+# Gender → Title
+# ---------------------------
+def get_title(name):
+    name = name.lower()
+    if list(prolog.query(f"male({name})")):
+        return f"Ntate {name.capitalize()}"
+    elif list(prolog.query(f"female({name})")):
+        return f"Mme {name.capitalize()}"
+    else:
+        return name.capitalize()
 
-def extract_name(question):
-    words = question.lower().split()
-    return words[-1].replace("?", "")
+# ---------------------------
+# Relationship Mapping
+# ---------------------------
+relationships = {
+    "father": "father_of",
+    "mother": "mother_of",
+    "grandfather": "grandfather_of",
+    "grandmother": "grandmother_of",
+    "brother": "brother_of",
+    "sister": "sister_of",
+    "uncle": "uncle_of",
+    "aunt": "aunt_of",
+    "ancestor": "ancestor_of"
+}
 
+# ---------------------------
+# Format Answer Properly
+# ---------------------------
+def format_answer(names, person, relation):
+    if not names:
+        return f"No {relation} found for {person.capitalize()}."
 
+    formatted = [get_title(name) for name in names]
+
+    singular_relations = {"mother", "father", "grandmother", "grandfather"}
+
+    if relation in singular_relations:
+        # Only take the first result for singular relations
+        return f"{formatted[0]} is {person.capitalize()}'s {relation}."
+    else:
+        if len(formatted) == 1:
+            return f"{formatted[0]} is {person.capitalize()}'s {relation}."
+        else:
+            names_str = ", ".join(formatted)
+            return f"{names_str} are {person.capitalize()}'s {relation}s."
+
+# ---------------------------
+# Main NLP Processor
+# ---------------------------
 def process_question(question):
-    question = question.lower()
+    question = question.lower().strip()
 
-    # Define relationships: predicate, label, title
-    relationships = {
-        "father of": ("father_of", "father", "Ntate"),
-        "mother of": ("mother_of", "mother", "Mme"),
-        "brother of": ("brother_of", "brother", ""),
-        "sister of": ("sister_of", "sister", ""),
-        "grandfather of": ("grandfather_of", "grandfather", "Ntate"),
-        "grandmother of": ("grandmother_of", "grandmother", "Mme"),
-        "aunt of": ("aunt_of", "aunt", "Mme"),
-        "uncle of": ("uncle_of", "uncle", "Ntate"),
-        "ancestor of": ("ancestor_of", "ancestor", "")
-    }
+    # Who is X's Y?
+    match = re.search(r"who is (\w+)'s (\w+)", question)
+    if match:
+        person = match.group(1)
+        relation = match.group(2)
 
-    # Extract the person name from the question
-    person = question.split()[-1].replace("?", "").capitalize()
+        if relation in relationships:
+            predicate = relationships[relation]
+            # Debug: only for mother/father check
+            if relation in {"mother", "father"}:
+                results = list(prolog.query(f"{predicate}(X,{person})"))
+                print("DEBUG: direct", relation, "query:", results)
+            else:
+                results = list(prolog.query(f"{predicate}(X,{person})"))
 
-    # Check if the person exists in the family tree
-    exists_query = list(prolog.query(f"male({person.lower()})")) + \
-                   list(prolog.query(f"female({person.lower()})"))
+            unique_names = sorted(set(r["X"] for r in results))
+            return format_answer(unique_names, person, relation)
 
-    if not exists_query:
-        return f"Sorry, I don't know anyone named {person}."
+    # Who is the Y of X?
+    match = re.search(r"who is the (\w+) of (\w+)", question)
+    if match:
+        relation = match.group(1)
+        person = match.group(2)
 
-    # Process relationships
-    for phrase, (predicate, label, title) in relationships.items():
-        if phrase in question:
-            result = list(prolog.query(f"{predicate}(X, {person})"))
+        if relation in relationships:
+            predicate = relationships[relation]
+            results = list(prolog.query(f"{predicate}(X,{person})"))
+            unique_names = sorted(set(r["X"] for r in results))
+            return format_answer(unique_names, person, relation)
+
+    # List all children of X
+    match = re.search(r"(list|who are) (all )?children of (\w+)", question)
+    if match:
+        person = match.group(3)
+        results = list(prolog.query(f"parent_of(X,{person})"))
+        unique_names = sorted(set(r["X"] for r in results))
+
+        if not unique_names:
+            return f"{person.capitalize()} has no children in the knowledge base."
+
+        formatted = [get_title(name) for name in unique_names]
+
+        if len(formatted) == 1:
+            return f"{formatted[0]} is the child of {person.capitalize()}."
+        else:
+            names_str = ", ".join(formatted)
+            return f"{names_str} are the children of {person.capitalize()}."
+
+    # Is X a Y of Z?
+    match = re.search(r"is (\w+) a (\w+) of (\w+)", question)
+    if match:
+        person1 = match.group(1)
+        relation = match.group(2)
+        person2 = match.group(3)
+
+        if relation in relationships:
+            predicate = relationships[relation]
+            result = list(prolog.query(f"{predicate}({person1},{person2})"))
 
             if result:
-                # Remove duplicates and capitalize names
-                answers = sorted({r["X"].capitalize() for r in result})
-
-                # Prepend title if defined
-                if title:
-                    answers = [f"{title} {name}" for name in answers]
-
-                # Return nicely formatted answer
-                return f"{', '.join(answers)} is {person}'s {label}."
-
+                return f"Yes, {get_title(person1)} is {person2.capitalize()}'s {relation}."
             else:
-                return f"No {label} found for {person}."
-
-    # If no relationship matches the question
-    return "Sorry, I don't understand the question."
-
-    # Process relationships
-    for phrase, (predicate, label, title) in relationships.items():
-        if phrase in question:
-            query = f"{predicate}(X, {person})"
-            result = list(prolog.query(query))
-
-            if result:
-                # Remove duplicates and sort
-                answers = sorted({r["X"].capitalize() for r in result})
-
-                # Include title if set
-                if title:
-                    answer_text = f"{title} {', '.join(answers)} is {person}'s {label}."
-                else:
-                    answer_text = f"{', '.join(answers)} is {person}'s {label}."
-
-                return answer_text
-            else:
-                return f"No {label} found for {person}."
+                return f"No, {get_title(person1)} is not {person2.capitalize()}'s {relation}."
 
     return "Sorry, I don't understand the question."
 
-
+# ---------------------------
+# Flask Route
+# ---------------------------
 @app.route("/", methods=["GET", "POST"])
 def index():
     answer = ""
     if request.method == "POST":
-        question = request.form.get("question")
-        if question:
-            answer = process_question(question)
+        question = request.form["question"]
+        answer = process_question(question)
     return render_template("index.html", answer=answer)
 
-
+# ---------------------------
+# Run Locally
+# ---------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Use Render's assigned port if available
-    app.run(host="0.0.0.0", port=port)
-
-
-
-
-
-
-
+    app.run(debug=True)
