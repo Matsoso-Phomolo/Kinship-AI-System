@@ -257,3 +257,12 @@ person(Person) :-
 
 person(Person) :-
     female(Person).
+
+/* =========================================================
+   FAMILY GRAPH EDGE
+
+   graph_edge(Parent, Child)
+========================================================= */
+
+graph_edge(Parent, Child) :-
+    parent_of(Parent, Child).
