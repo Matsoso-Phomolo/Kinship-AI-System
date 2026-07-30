@@ -4,6 +4,14 @@ import logging
 import os
 import re
 
+@app.route(
+    "/explorer",
+    methods=["GET"],
+)
+def explorer():
+    return render_template(
+        "explorer.html"
+    )
 
 # =========================================================
 # APPLICATION CONFIGURATION
