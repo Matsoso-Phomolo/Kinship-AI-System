@@ -1528,3 +1528,663 @@ button {
 .desktop-nav a.active::after {
     transform: scaleX(1);
 }
+
+/* =========================================================
+   FAMILY EXPLORER
+========================================================= */
+
+.explorer-hero {
+    width: min(calc(100% - 40px), var(--max-width));
+
+    margin: 0 auto;
+
+    padding: 78px 0 46px;
+}
+
+.explorer-hero > div {
+    max-width: 760px;
+}
+
+.explorer-hero h1 {
+    margin-top: 12px;
+
+    font-size:
+        clamp(38px, 6vw, 64px);
+
+    line-height: 1.05;
+
+    letter-spacing: -0.04em;
+}
+
+.explorer-hero p {
+    margin-top: 20px;
+
+    max-width: 670px;
+
+    color: var(--text-secondary);
+
+    font-size: 17px;
+}
+
+
+.explorer-section {
+    width: min(calc(100% - 40px), var(--max-width));
+
+    margin: 0 auto;
+
+    padding-bottom: 100px;
+}
+
+
+.explorer-layout {
+    display: grid;
+
+    grid-template-columns:
+        280px minmax(0, 1fr);
+
+    gap: 22px;
+
+    align-items: start;
+}
+
+
+/* =========================================================
+   PEOPLE PANEL
+========================================================= */
+
+.people-panel,
+.relationship-selector-card,
+.graph-card {
+    border: 1px solid var(--border);
+
+    border-radius: var(--radius-lg);
+
+    background:
+        rgba(14, 29, 47, 0.88);
+
+    box-shadow:
+        0 20px 45px rgba(0, 0, 0, 0.16);
+}
+
+
+.people-panel {
+    position: sticky;
+
+    top: 98px;
+
+    padding: 22px;
+}
+
+
+.panel-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 18px;
+}
+
+
+.panel-heading h2 {
+    margin-top: 5px;
+
+    font-size: 20px;
+}
+
+
+.people-count {
+    min-width: 34px;
+    height: 34px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 10px;
+
+    background:
+        rgba(77, 141, 255, 0.11);
+
+    color: var(--primary-light);
+
+    font-size: 12px;
+    font-weight: 800;
+}
+
+
+.people-search {
+    margin-top: 22px;
+}
+
+
+.people-search input {
+    width: 100%;
+
+    height: 44px;
+
+    padding: 0 13px;
+
+    outline: 0;
+
+    border: 1px solid var(--border);
+
+    border-radius: 10px;
+
+    background: #091522;
+
+    color: var(--text);
+}
+
+
+.people-search input:focus {
+    border-color: var(--primary);
+}
+
+
+.people-list {
+    margin-top: 14px;
+
+    max-height: 510px;
+
+    overflow-y: auto;
+}
+
+
+.person-list-item {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 12px 8px;
+
+    border: 0;
+    border-bottom: 1px solid var(--border);
+
+    background: transparent;
+
+    color: inherit;
+
+    text-align: left;
+
+    transition:
+        background var(--transition);
+}
+
+
+.person-list-item:hover {
+    background:
+        rgba(77, 141, 255, 0.06);
+}
+
+
+.person-avatar {
+    width: 38px;
+    height: 38px;
+
+    flex: 0 0 38px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 50%;
+
+    background:
+        rgba(77, 141, 255, 0.13);
+
+    color: var(--primary-light);
+
+    font-size: 13px;
+    font-weight: 800;
+}
+
+
+.person-details {
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+}
+
+
+.person-details strong {
+    font-size: 13px;
+}
+
+
+.person-details span {
+    margin-top: 2px;
+
+    color: var(--text-muted);
+
+    font-size: 11px;
+
+    text-transform: capitalize;
+}
+
+
+.people-loading,
+.people-error,
+.people-empty {
+    padding: 24px 8px;
+
+    color: var(--text-muted);
+
+    font-size: 13px;
+
+    text-align: center;
+}
+
+
+/* =========================================================
+   RELATIONSHIP WORKSPACE
+========================================================= */
+
+.relationship-workspace {
+    display: grid;
+
+    gap: 22px;
+}
+
+
+.relationship-selector-card,
+.graph-card {
+    padding: 26px;
+}
+
+
+.relationship-selectors {
+    margin-top: 26px;
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        auto
+        minmax(0, 1fr);
+
+    align-items: end;
+
+    gap: 18px;
+}
+
+
+.person-selector label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: var(--text-secondary);
+
+    font-size: 12px;
+}
+
+
+.person-selector select {
+    width: 100%;
+
+    height: 50px;
+
+    padding: 0 14px;
+
+    outline: 0;
+
+    border: 1px solid var(--border-strong);
+
+    border-radius: 11px;
+
+    background: #091522;
+
+    color: var(--text);
+}
+
+
+.person-selector select:focus {
+    border-color: var(--primary);
+}
+
+
+.relationship-symbol {
+    height: 50px;
+
+    display: flex;
+    align-items: center;
+
+    color: var(--primary-light);
+
+    font-size: 22px;
+}
+
+
+.discover-button {
+    width: 100%;
+
+    min-height: 50px;
+
+    margin-top: 20px;
+
+    border: 0;
+
+    border-radius: 11px;
+
+    background: var(--primary);
+
+    color: white;
+
+    font-weight: 750;
+}
+
+
+.discover-button:hover {
+    background: var(--primary-light);
+}
+
+
+.discover-button:disabled {
+    opacity: 0.7;
+
+    cursor: wait;
+}
+
+
+.relationship-result {
+    margin-top: 22px;
+
+    padding: 20px;
+
+    display: flex;
+    align-items: flex-start;
+
+    gap: 14px;
+
+    border: 1px solid
+        rgba(77, 141, 255, 0.18);
+
+    border-radius: 14px;
+
+    background:
+        rgba(77, 141, 255, 0.05);
+}
+
+
+.relationship-result.empty {
+    border-color: var(--border);
+
+    background:
+        rgba(255, 255, 255, 0.018);
+}
+
+
+.relationship-result.error {
+    border-color:
+        rgba(255, 130, 130, 0.2);
+}
+
+
+.result-symbol {
+    width: 40px;
+    height: 40px;
+
+    flex: 0 0 40px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 10px;
+
+    background:
+        rgba(77, 141, 255, 0.13);
+
+    color: var(--primary-light);
+
+    font-size: 12px;
+    font-weight: 800;
+}
+
+
+.relationship-result h3 {
+    font-size: 14px;
+}
+
+
+.relationship-result p {
+    margin-top: 4px;
+
+    color: var(--text-secondary);
+
+    font-size: 13px;
+
+    line-height: 1.65;
+}
+
+
+/* =========================================================
+   FAMILY GRAPH
+========================================================= */
+
+.family-tree-canvas {
+    margin-top: 28px;
+
+    display: grid;
+
+    gap: 20px;
+}
+
+
+.tree-generation {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 12px;
+}
+
+
+.generation-three {
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    max-width: 480px;
+
+    margin: 0 auto;
+
+    width: 100%;
+}
+
+
+.tree-person {
+    min-height: 94px;
+
+    padding: 16px;
+
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+
+    border: 1px solid var(--border);
+
+    border-radius: 13px;
+
+    background:
+        linear-gradient(
+            150deg,
+            #102036,
+            #0b1828
+        );
+
+    cursor: pointer;
+
+    transition:
+        transform var(--transition),
+        border-color var(--transition),
+        background var(--transition);
+}
+
+
+.tree-person:hover {
+    transform: translateY(-3px);
+
+    border-color:
+        rgba(77, 141, 255, 0.35);
+}
+
+
+.tree-person.selected {
+    border-color: var(--primary);
+
+    background:
+        rgba(77, 141, 255, 0.13);
+
+    box-shadow:
+        0 0 0 3px
+        rgba(77, 141, 255, 0.06);
+}
+
+
+.tree-role {
+    color: var(--text-muted);
+
+    font-size: 10px;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.1em;
+}
+
+
+.tree-person strong {
+    margin-top: 7px;
+
+    font-size: 15px;
+}
+
+
+.generation-divider {
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    color: var(--text-muted);
+
+    font-size: 10px;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.1em;
+}
+
+
+.generation-divider::before,
+.generation-divider::after {
+    content: "";
+
+    height: 1px;
+
+    flex: 1;
+
+    background: var(--border);
+}
+
+
+.graph-help {
+    margin-top: 20px;
+
+    color: var(--text-muted);
+
+    font-size: 11px;
+
+    text-align: center;
+}
+
+
+/* =========================================================
+   EXPLORER RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+
+    .explorer-layout {
+        grid-template-columns: 1fr;
+    }
+
+
+    .people-panel {
+        position: static;
+    }
+
+
+    .people-list {
+        max-height: 300px;
+    }
+
+}
+
+
+@media (max-width: 700px) {
+
+    .explorer-hero,
+    .explorer-section {
+        width:
+            min(
+                calc(100% - 28px),
+                var(--max-width)
+            );
+    }
+
+
+    .explorer-hero {
+        padding-top: 55px;
+    }
+
+
+    .relationship-selector-card,
+    .graph-card,
+    .people-panel {
+        padding: 18px;
+    }
+
+
+    .relationship-selectors {
+        grid-template-columns: 1fr;
+    }
+
+
+    .relationship-symbol {
+        height: auto;
+
+        justify-content: center;
+
+        transform: rotate(90deg);
+    }
+
+
+    .tree-generation {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+
+    .generation-three {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+
+@media (max-width: 430px) {
+
+    .tree-generation,
+    .generation-three {
+        grid-template-columns: 1fr;
+    }
+
+
+    .tree-person {
+        min-height: 78px;
+    }
+
+   }
