@@ -1,1 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
 
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Family Explorer | Kinship AI</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+
+<body>
+
+    <div class="app-shell">
+
+        <header class="site-header">
+
+            <div class="nav-container">
+
+                <a href="/" class="brand">
+                    <div class="brand-mark">K</div>
+
+                    <div class="brand-text">
+                        <span class="brand-name">
+                            Kinship AI
+                        </span>
+
+                        <span class="brand-tagline">
+                            Symbolic Relationship Intelligence
+                        </span>
+                    </div>
+                </a>
+
+                <nav class="desktop-nav">
+                    <a href="/">Home</a>
+                    <a href="/#ask">Ask AI</a>
+                    <a href="/explorer" class="active">Family Explorer</a>
+                </nav>
+
+                <button
+                    class="mobile-menu-button"
+                    id="mobileMenuButton"
+                    type="button"
+                    aria-label="Open navigation menu"
+                    aria-expanded="false"
+                >
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+
+            </div>
+
+            <nav
+                class="mobile-nav"
+                id="mobileNav"
+            >
+                <a href="/">Home</a>
+                <a href="/#ask">Ask AI</a>
+                <a href="/explorer">Family Explorer</a>
+            </nav>
+
+        </header>
+
+
+        <main>
+
+            <section class="explorer-hero">
+
+                <div>
+                    <span class="section-label">
+                        FAMILY KNOWLEDGE GRAPH
+                    </span>
+
+                    <h1>
+                        Explore Family Relationships
+                    </h1>
+
+                    <p>
+                        Select two people from the knowledge base
+                        and let Kinship AI discover how they are related.
+                    </p>
+                </div>
+
+            </section>
+
+
+            <section class="explorer-section">
+
+                <div class="explorer-layout">
+
+                    <aside class="people-panel">
+
+                        <div class="panel-heading">
+                            <div>
+                                <span class="section-label">
+                                    PEOPLE
+                                </span>
+
+                                <h2>
+                                    Knowledge Base
+                                </h2>
+                            </div>
+
+                            <span
+                                class="people-count"
+                                id="peopleCount"
+                            >
+                                0
+                            </span>
+                        </div>
+
+
+                        <div class="people-search">
+
+                            <input
+                                type="search"
+                                id="peopleSearch"
+                                placeholder="Search people..."
+                                autocomplete="off"
+                            >
+
+                        </div>
+
+
+                        <div
+                            class="people-list"
+                            id="peopleList"
+                        >
+
+                            <div class="people-loading">
+                                Loading family members...
+                            </div>
+
+                        </div>
+
+                    </aside>
+
+
+                    <section class="relationship-workspace">
+
+                        <div class="relationship-selector-card">
+
+                            <div class="panel-heading">
+
+                                <div>
+                                    <span class="section-label">
+                                        RELATIONSHIP DISCOVERY
+                                    </span>
+
+                                    <h2>
+                                        Compare Two People
+                                    </h2>
+                                </div>
+
+                            </div>
+
+
+                            <div class="relationship-selectors">
+
+                                <div class="person-selector">
+
+                                    <label for="personOne">
+                                        First person
+                                    </label>
+
+                                    <select
+                                        id="personOne"
+                                    >
+                                        <option value="">
+                                            Select person
+                                        </option>
+                                    </select>
+
+                                </div>
+
+
+                                <div class="relationship-symbol">
+                                    ↔
+                                </div>
+
+
+                                <div class="person-selector">
+
+                                    <label for="personTwo">
+                                        Second person
+                                    </label>
+
+                                    <select
+                                        id="personTwo"
+                                    >
+                                        <option value="">
+                                            Select person
+                                        </option>
+                                    </select>
+
+                                </div>
+
+                            </div>
+
+
+                            <button
+                                type="button"
+                                class="discover-button"
+                                id="discoverButton"
+                            >
+                                Discover Relationship
+                            </button>
+
+
+                            <div
+                                class="relationship-result empty"
+                                id="relationshipResult"
+                            >
+
+                                <div class="result-symbol">
+                                    ?
+                                </div>
+
+                                <div>
+                                    <h3>
+                                        No relationship selected
+                                    </h3>
+
+                                    <p>
+                                        Choose two people and Kinship AI
+                                        will reason about their relationship.
+                                    </p>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="graph-card">
+
+                            <div class="panel-heading">
+
+                                <div>
+                                    <span class="section-label">
+                                        FAMILY GRAPH
+                                    </span>
+
+                                    <h2>
+                                        Relationship Map
+                                    </h2>
+                                </div>
+
+                            </div>
+
+
+                            <div
+                                class="family-tree-canvas"
+                                id="familyTreeCanvas"
+                            >
+
+                                <div class="tree-generation generation-one">
+
+                                    <div
+                                        class="tree-person"
+                                        data-person="jack"
+                                    >
+                                        <span class="tree-role">
+                                            Person
+                                        </span>
+
+                                        <strong>
+                                            Jack
+                                        </strong>
+                                    </div>
+
+
+                                    <div
+                                        class="tree-person"
+                                        data-person="helen"
+                                    >
+                                        <span class="tree-role">
+                                            Person
+                                        </span>
+
+                                        <strong>
+                                            Helen
+                                        </strong>
+                                    </div>
+
+
+                                    <div
+                                        class="tree-person"
+                                        data-person="oliver"
+                                    >
+                                        <span class="tree-role">
+                                            Person
+                                        </span>
+
+                                        <strong>
+                                            Oliver
+                                        </strong>
+                                    </div>
+
+
+                                    <div
+                                        class="tree-person"
+                                        data-person="sophie"
+                                    >
+                                        <span class="tree-role">
+                                            Person
+                                        </span>
+
+                                        <strong>
+                                            Sophie
+                                        </strong>
+                                    </div>
+
+                                </div>
+
+
+                                <div class="generation-divider">
+                                    Generation 2
+                                </div>
+
+
+                                <div class="tree-generation generation-two">
+
+                                    <div
+                                        class="tree-person"
+                                        data-person="jess"
+                                    >
+                                        <span class="tree-role">
+                                            Person
+                                        </span>
+
+                                        <strong>
+                                            Jess
+                                        </strong>
+                                    </div>
+
+
+                                    <div
+                                        class="tree-person"
+                                        data-person="lily"
+                                    >
+                                        <span class="tree-role">
+                                            Person
+                                        </span>
+
+                                        <strong>
+                                            Lily
+                                        </strong>
+                                    </div>
+
+
+                                    <div
+                                        class="tree-person"
+                                        data-person="james"
+                                    >
+                                        <span class="tree-role">
+                                            Person
+                                        </span>
+
+                                        <strong>
+                                            James
+                                        </strong>
+                                    </div>
+
+
+                                    <div
+                                        class="tree-person"
+                                        data-person="ali"
+                                    >
+                                        <span class="tree-role">
+                                            Person
+                                        </span>
+
+                                        <strong>
+                                            Ali
+                                        </strong>
+                                    </div>
+
+                                </div>
+
+
+                                <div class="generation-divider">
+                                    Generation 3
+                                </div>
+
+
+                                <div class="tree-generation generation-three">
+
+                                    <div
+                                        class="tree-person"
+                                        data-person="simon"
+                                    >
+                                        <span class="tree-role">
+                                            Person
+                                        </span>
+
+                                        <strong>
+                                            Simon
+                                        </strong>
+                                    </div>
+
+
+                                    <div
+                                        class="tree-person"
+                                        data-person="harry"
+                                    >
+                                        <span class="tree-role">
+                                            Person
+                                        </span>
+
+                                        <strong>
+                                            Harry
+                                        </strong>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="graph-help">
+                                Tap a person to use them in relationship discovery.
+                            </div>
+
+                        </div>
+
+                    </section>
+
+                </div>
+
+            </section>
+
+        </main>
+
+
+        <footer class="site-footer">
+
+            <div class="footer-bottom">
+                Kinship AI Family Explorer
+            </div>
+
+        </footer>
+
+    </div>
+
+
+    <script
+        src="{{ url_for('static', filename='js/app.js') }}"
+    ></script>
+
+    <script
+        src="{{ url_for('static', filename='js/explorer.js') }}"
+    ></script>
+
+</body>
+  </html>
