@@ -803,6 +803,128 @@ def process_question(question: str) -> str:
     lower = normalized.lower()
 
 
+    def discover_relationship_by_id(
+    person1: str,
+    person2: str,
+) -> str:
+    """
+    Discover a relationship using unique Prolog IDs.
+
+    This avoids ambiguity when multiple people have
+    the same human-readable display name.
+    """
+
+    if not person_exists(person1):
+        return (
+            f"{person1} is not recorded "
+            "in the knowledge base."
+        )
+
+    if not person_exists(person2):
+        return (
+            f"{person2} is not recorded "
+            "in the knowledge base."
+        )
+
+    if person1 == person2:
+        return (
+            f"{get_title(person1)} refers "
+            "to the same person."
+        )
+
+    discovered = []
+
+    for relation, predicate in RELATIONSHIP_DISCOVERY_ORDER:
+        result = query_prolog(
+            f"{predicate}({person1},{person2})"
+        )
+
+        if result:
+            discovered.append(relation)
+
+    if not discovered:
+        return (
+            f"No supported relationship between "
+            f"{get_title(person1)} and "
+            f"{get_title(person2)} could be proven "
+            "from the current knowledge base."
+        )
+
+    specificity = {
+        "parent": {
+            "father",
+            "mother",
+        },
+        "child": {
+            "son",
+            "daughter",
+        },
+        "sibling": {
+            "brother",
+            "sister",
+            "older sibling",
+            "younger sibling",
+        },
+        "grandparent": {
+            "grandfather",
+            "grandmother",
+        },
+        "grandchild": {
+            "grandson",
+            "granddaughter",
+        },
+        "step parent": {
+            "step father",
+            "step mother",
+        },
+    }
+
+    filtered = []
+
+    for relation in discovered:
+        specific_options = specificity.get(
+            relation
+        )
+
+        if specific_options and any(
+            option in discovered
+            for option in specific_options
+        ):
+            continue
+
+        if relation not in filtered:
+            filtered.append(relation)
+
+    if any(
+        relation not in {
+            "ancestor",
+            "descendant",
+        }
+        for relation in filtered
+    ):
+        filtered = [
+            relation
+            for relation in filtered
+            if relation not in {
+                "ancestor",
+                "descendant",
+            }
+        ]
+
+    if len(filtered) == 1:
+        return (
+            f"{get_title(person1)} is "
+            f"{get_title(person2)}'s "
+            f"{filtered[0]}."
+        )
+
+    return (
+        f"{get_title(person1)} is related to "
+        f"{get_title(person2)} as: "
+        f"{join_names(filtered)}."
+    )
+
+
     # -----------------------------------------------------
     # How is X related to Y?
     # -----------------------------------------------------
@@ -1382,25 +1504,37 @@ def api_relationship(
     person1: str,
     person2: str,
 ):
-    if (
-        person_exists(person1)
-        and person_exists(person2)
-    ):
-        result = discover_relationship(
-            get_display_name(person1),
-            get_display_name(person2),
-        )
+    if not person_exists(person1):
+        return jsonify(
+            {
+                "error": "person_not_found",
+                "message": (
+                    f"Person '{person1}' does not exist "
+                    "in the knowledge base."
+                ),
+            }
+        ), 404
 
-    else:
-        result = discover_relationship(
-            person1,
-            person2,
-        )
+    if not person_exists(person2):
+        return jsonify(
+            {
+                "error": "person_not_found",
+                "message": (
+                    f"Person '{person2}' does not exist "
+                    "in the knowledge base."
+                ),
+            }
+        ), 404
+
+    result = discover_relationship_by_id(
+        person1,
+        person2,
+    )
 
     return jsonify(
         {
-            "person1": person1,
-            "person2": person2,
+            "person1": build_person_profile(person1),
+            "person2": build_person_profile(person2),
             "result": result,
         }
     )
