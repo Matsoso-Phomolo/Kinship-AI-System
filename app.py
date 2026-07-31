@@ -1041,6 +1041,15 @@ def index():
 
 
 # =========================================================
+# FAMILY EXPLORER
+# =========================================================
+
+@app.route("/explorer", methods=["GET"])
+def explorer():
+    return render_template("explorer.html")
+
+
+# =========================================================
 # API — PEOPLE
 # =========================================================
 
@@ -1095,6 +1104,113 @@ def api_people():
         {
             "count": len(response),
             "people": response,
+        }
+    )
+
+
+# =========================================================
+# API — FAMILY GRAPH
+# =========================================================
+
+@app.route(
+    "/api/graph",
+    methods=["GET"],
+)
+def api_graph():
+
+    person_results = query_prolog(
+        "person(X)"
+    )
+
+    people = sorted(
+        set(
+            unique_result_names(
+                person_results
+            )
+        )
+    )
+
+    nodes = []
+
+    for person in people:
+
+        gender = "unknown"
+
+        if query_prolog(
+            f"male({person})"
+        ):
+            gender = "male"
+
+        elif query_prolog(
+            f"female({person})"
+        ):
+            gender = "female"
+
+        nodes.append(
+            {
+                "id": person,
+                "name": display_name(
+                    person
+                ),
+                "title": get_title(
+                    person
+                ),
+                "gender": gender,
+            }
+        )
+
+
+    edge_results = query_prolog(
+        "graph_edge(Parent,Child)"
+    )
+
+    edges = []
+
+    seen_edges = set()
+
+    for result in edge_results:
+
+        if (
+            "Parent" not in result
+            or "Child" not in result
+        ):
+            continue
+
+        parent = str(
+            result["Parent"]
+        )
+
+        child = str(
+            result["Child"]
+        )
+
+        edge_key = (
+            parent,
+            child,
+        )
+
+        if edge_key in seen_edges:
+            continue
+
+        seen_edges.add(
+            edge_key
+        )
+
+        edges.append(
+            {
+                "source": parent,
+                "target": child,
+                "relationship": "parent",
+            }
+        )
+
+
+    return jsonify(
+        {
+            "nodes": nodes,
+            "edges": edges,
+            "node_count": len(nodes),
+            "edge_count": len(edges),
         }
     )
 
