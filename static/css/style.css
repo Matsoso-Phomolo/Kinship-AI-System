@@ -2264,3 +2264,278 @@ button {
 
     font-size: 13px;
 }
+
+/* =========================================================
+   MOLELEKI MATSOSO FAMILY EXPLORER ENHANCEMENTS
+========================================================= */
+
+.person-details small {
+    margin-top: 3px;
+
+    color: var(--text-muted);
+
+    font-size: 10px;
+
+    line-height: 1.35;
+}
+
+
+/* =========================================================
+   GRAPH SUMMARY
+========================================================= */
+
+.graph-summary {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 10px;
+
+    margin-bottom: 22px;
+}
+
+.graph-summary > div {
+    padding: 14px;
+
+    display: flex;
+    flex-direction: column;
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+    background:
+        rgba(255, 255, 255, 0.018);
+}
+
+.graph-summary strong {
+    color: var(--primary-light);
+
+    font-size: 20px;
+}
+
+.graph-summary span {
+    margin-top: 2px;
+
+    color: var(--text-muted);
+
+    font-size: 10px;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.06em;
+}
+
+
+/* =========================================================
+   GRAPH LEGEND
+========================================================= */
+
+.graph-legend {
+    margin-bottom: 25px;
+
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 16px;
+
+    color: var(--text-muted);
+
+    font-size: 11px;
+}
+
+.graph-legend span {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 7px;
+}
+
+.legend-dot {
+    width: 8px;
+    height: 8px;
+
+    display: inline-block;
+
+    border-radius: 50%;
+}
+
+.legend-dot.biological {
+    background: var(--primary);
+}
+
+.legend-dot.marriage {
+    background: var(--success);
+}
+
+.legend-dot.step {
+    border: 1px dashed var(--primary-light);
+
+    background: transparent;
+}
+
+
+/* =========================================================
+   PERSON GRAPH CARDS
+========================================================= */
+
+.tree-person-gender {
+    width: fit-content;
+
+    padding: 3px 7px;
+
+    border-radius: 999px;
+
+    background:
+        rgba(77, 141, 255, 0.08);
+
+    color: var(--text-muted);
+
+    font-size: 9px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.08em;
+
+    text-transform: uppercase;
+}
+
+.dynamic-tree-person small {
+    margin-top: 5px;
+
+    color: var(--text-muted);
+
+    font-size: 10px;
+
+    line-height: 1.4;
+}
+
+.former-name {
+    margin-top: 8px;
+
+    color: var(--primary-light);
+
+    font-size: 9px;
+
+    line-height: 1.4;
+}
+
+
+/* First selected person */
+
+.tree-person.selected-first {
+    border-color: var(--primary);
+
+    box-shadow:
+        0 0 0 3px
+        rgba(77, 141, 255, 0.08);
+}
+
+
+/* Second selected person */
+
+.tree-person.selected-second {
+    border-color: var(--success);
+
+    box-shadow:
+        0 0 0 3px
+        rgba(69, 214, 155, 0.08);
+}
+
+
+.person-list-item.selected {
+    background:
+        rgba(77, 141, 255, 0.07);
+}
+
+
+/* =========================================================
+   RELATIONSHIP RESULT
+========================================================= */
+
+.relationship-result-content {
+    min-width: 0;
+
+    flex: 1;
+}
+
+.relationship-pair {
+    margin-top: 12px;
+
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+
+    gap: 8px;
+
+    color: var(--text);
+}
+
+.relationship-pair span {
+    padding: 5px 9px;
+
+    border: 1px solid var(--border);
+
+    border-radius: 999px;
+
+    background:
+        rgba(255, 255, 255, 0.02);
+
+    font-size: 11px;
+}
+
+.relationship-pair strong {
+    color: var(--primary-light);
+}
+
+.relationship-answer {
+    margin-top: 14px !important;
+
+    color: var(--text) !important;
+
+    font-size: 15px !important;
+}
+
+.relationship-result-content small {
+    display: block;
+
+    margin-top: 13px;
+
+    color: var(--text-muted);
+
+    font-size: 10px;
+}
+
+
+/* =========================================================
+   RESPONSIVE GRAPH SUMMARY
+========================================================= */
+
+@media (max-width: 700px) {
+
+    .graph-summary {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+
+@media (max-width: 420px) {
+
+    .graph-summary {
+        grid-template-columns: 1fr 1fr;
+
+        gap: 7px;
+    }
+
+    .graph-summary > div {
+        padding: 11px;
+    }
+
+    .graph-summary strong {
+        font-size: 17px;
+    }
+
+   }
