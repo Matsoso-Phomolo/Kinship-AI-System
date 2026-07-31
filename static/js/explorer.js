@@ -24,63 +24,131 @@ document.addEventListener("DOMContentLoaded", () => {
     const relationshipResult =
         document.getElementById("relationshipResult");
 
-    const treePeople =
-        document.querySelectorAll(".tree-person");
+    const familyTreeCanvas =
+        document.getElementById("familyTreeCanvas");
 
 
     let people = [];
+    let graph = {
+        nodes: [],
+        edges: []
+    };
 
 
-    async function loadPeople() {
+    /* =====================================================
+       LOAD DATA
+    ===================================================== */
+
+    async function loadExplorerData() {
 
         try {
 
-            const response =
-                await fetch("/api/people");
+            const [
+                peopleResponse,
+                graphResponse
+            ] = await Promise.all([
+                fetch("/api/people"),
+                fetch("/api/graph")
+            ]);
 
-            if (!response.ok) {
+
+            if (
+                !peopleResponse.ok ||
+                !graphResponse.ok
+            ) {
                 throw new Error(
-                    "Unable to load people."
+                    "Explorer data could not be loaded."
                 );
             }
 
-            const data =
-                await response.json();
+
+            const peopleData =
+                await peopleResponse.json();
+
+            const graphData =
+                await graphResponse.json();
+
 
             people =
-                Array.isArray(data.people)
-                    ? data.people
+                Array.isArray(
+                    peopleData.people
+                )
+                    ? peopleData.people
                     : [];
+
+
+            graph = {
+                nodes:
+                    Array.isArray(
+                        graphData.nodes
+                    )
+                        ? graphData.nodes
+                        : [],
+
+                edges:
+                    Array.isArray(
+                        graphData.edges
+                    )
+                        ? graphData.edges
+                        : []
+            };
+
 
             renderPeople(people);
 
             populateSelects(people);
 
+            renderGraph(graph);
+
+
             if (peopleCount) {
                 peopleCount.textContent =
-                    String(people.length);
+                    String(
+                        people.length
+                    );
             }
 
         } catch (error) {
 
             console.error(error);
 
+
             if (peopleList) {
+
                 peopleList.innerHTML = `
                     <div class="people-error">
                         Family members could not be loaded.
                     </div>
                 `;
+
             }
+
+
+            if (familyTreeCanvas) {
+
+                familyTreeCanvas.innerHTML = `
+                    <div class="graph-error">
+                        Family graph could not be loaded.
+                    </div>
+                `;
+
+            }
+
         }
+
     }
 
+
+    /* =====================================================
+       PEOPLE LIST
+    ===================================================== */
 
     function renderPeople(list) {
 
         if (!peopleList) {
             return;
         }
+
 
         if (!list.length) {
 
@@ -91,79 +159,95 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
 
             return;
+
         }
 
 
         peopleList.innerHTML =
             list
-                .map((person) => `
-                    <button
-                        type="button"
-                        class="person-list-item"
-                        data-person="${escapeHtml(person.id)}"
-                    >
-                        <div class="person-avatar">
-                            ${escapeHtml(
-                                person.name.charAt(0)
-                            )}
-                        </div>
+                .map(
+                    (person) => `
+                        <button
+                            type="button"
+                            class="person-list-item"
+                            data-person="${escapeHtml(person.id)}"
+                        >
 
-                        <div class="person-details">
+                            <div class="person-avatar">
+                                ${escapeHtml(
+                                    person.name.charAt(0)
+                                )}
+                            </div>
 
-                            <strong>
-                                ${escapeHtml(person.name)}
-                            </strong>
+                            <div class="person-details">
 
-                            <span>
-                                ${escapeHtml(person.gender)}
-                            </span>
+                                <strong>
+                                    ${escapeHtml(person.name)}
+                                </strong>
 
-                        </div>
+                                <span>
+                                    ${escapeHtml(person.gender)}
+                                </span>
 
-                    </button>
-                `)
+                            </div>
+
+                        </button>
+                    `
+                )
                 .join("");
 
 
-        const personButtons =
+        const buttons =
             peopleList.querySelectorAll(
                 ".person-list-item"
             );
 
 
-        personButtons.forEach((button) => {
+        buttons.forEach(
+            (button) => {
 
-            button.addEventListener(
-                "click",
-                () => {
+                button.addEventListener(
+                    "click",
+                    () => {
 
-                    selectPerson(
-                        button.dataset.person
-                    );
+                        selectPerson(
+                            button.dataset.person
+                        );
 
-                }
-            );
+                    }
+                );
 
-        });
+            }
+        );
 
     }
 
 
+    /* =====================================================
+       SELECT OPTIONS
+    ===================================================== */
+
     function populateSelects(list) {
 
-        if (!personOne || !personTwo) {
+        if (
+            !personOne ||
+            !personTwo
+        ) {
             return;
         }
 
+
         const options =
             list
-                .map((person) => `
-                    <option
-                        value="${escapeHtml(person.id)}"
-                    >
-                        ${escapeHtml(person.title)}
-                    </option>
-                `)
+                .map(
+                    (person) => `
+                        <option
+                            value="${escapeHtml(person.id)}"
+                        >
+                            ${escapeHtml(person.title)}
+                        </option>
+                    `
+                )
                 .join("");
 
 
@@ -180,9 +264,372 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
+    /* =====================================================
+       FAMILY GRAPH
+    ===================================================== */
+
+    function renderGraph(graphData) {
+
+        if (!familyTreeCanvas) {
+            return;
+        }
+
+
+        if (!graphData.nodes.length) {
+
+            familyTreeCanvas.innerHTML = `
+                <div class="graph-empty">
+                    The knowledge base contains no people.
+                </div>
+            `;
+
+            return;
+
+        }
+
+
+        const generations =
+            buildGenerations(
+                graphData.nodes,
+                graphData.edges
+            );
+
+
+        familyTreeCanvas.innerHTML =
+            generations
+                .map(
+                    (
+                        generation,
+                        index
+                    ) => {
+
+                        const peopleMarkup =
+                            generation
+                                .map(
+                                    (person) => `
+                                        <button
+                                            type="button"
+                                            class="tree-person dynamic-tree-person"
+                                            data-person="${escapeHtml(person.id)}"
+                                        >
+
+                                            <span class="tree-role">
+                                                ${escapeHtml(person.gender)}
+                                            </span>
+
+                                            <strong>
+                                                ${escapeHtml(person.name)}
+                                            </strong>
+
+                                        </button>
+                                    `
+                                )
+                                .join("");
+
+
+                        return `
+                            <div class="generation-block">
+
+                                <div class="generation-title">
+                                    Generation ${index + 1}
+                                </div>
+
+                                <div class="dynamic-generation">
+                                    ${peopleMarkup}
+                                </div>
+
+                            </div>
+                        `;
+
+                    }
+                )
+                .join("");
+
+
+        const graphPeople =
+            familyTreeCanvas.querySelectorAll(
+                ".tree-person"
+            );
+
+
+        graphPeople.forEach(
+            (person) => {
+
+                person.addEventListener(
+                    "click",
+                    () => {
+
+                        selectPerson(
+                            person.dataset.person
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+
+        highlightSelectedPeople();
+
+    }
+
+
+    function buildGenerations(
+        nodes,
+        edges
+    ) {
+
+        const nodeMap =
+            new Map(
+                nodes.map(
+                    (node) => [
+                        node.id,
+                        node
+                    ]
+                )
+            );
+
+
+        const parentsOf =
+            new Map();
+
+        const childrenOf =
+            new Map();
+
+
+        nodes.forEach(
+            (node) => {
+
+                parentsOf.set(
+                    node.id,
+                    []
+                );
+
+                childrenOf.set(
+                    node.id,
+                    []
+                );
+
+            }
+        );
+
+
+        edges.forEach(
+            (edge) => {
+
+                if (
+                    parentsOf.has(
+                        edge.target
+                    )
+                ) {
+
+                    parentsOf
+                        .get(edge.target)
+                        .push(edge.source);
+
+                }
+
+
+                if (
+                    childrenOf.has(
+                        edge.source
+                    )
+                ) {
+
+                    childrenOf
+                        .get(edge.source)
+                        .push(edge.target);
+
+                }
+
+            }
+        );
+
+
+        const roots =
+            nodes
+                .filter(
+                    (node) =>
+                        parentsOf
+                            .get(node.id)
+                            .length === 0
+                )
+                .map(
+                    (node) =>
+                        node.id
+                );
+
+
+        const generationIndex =
+            new Map();
+
+
+        roots.forEach(
+            (root) => {
+
+                generationIndex.set(
+                    root,
+                    0
+                );
+
+            }
+        );
+
+
+        const queue = [
+            ...roots
+        ];
+
+
+        while (
+            queue.length
+        ) {
+
+            const current =
+                queue.shift();
+
+            const currentGeneration =
+                generationIndex.get(
+                    current
+                ) ?? 0;
+
+
+            const children =
+                childrenOf.get(
+                    current
+                ) || [];
+
+
+            children.forEach(
+                (child) => {
+
+                    const nextGeneration =
+                        currentGeneration + 1;
+
+
+                    const existingGeneration =
+                        generationIndex.get(
+                            child
+                        );
+
+
+                    if (
+                        existingGeneration === undefined ||
+                        nextGeneration >
+                        existingGeneration
+                    ) {
+
+                        generationIndex.set(
+                            child,
+                            nextGeneration
+                        );
+
+                    }
+
+
+                    if (
+                        !queue.includes(child)
+                    ) {
+                        queue.push(child);
+                    }
+
+                }
+            );
+
+        }
+
+
+        nodes.forEach(
+            (node) => {
+
+                if (
+                    !generationIndex.has(
+                        node.id
+                    )
+                ) {
+
+                    generationIndex.set(
+                        node.id,
+                        0
+                    );
+
+                }
+
+            }
+        );
+
+
+        const maxGeneration =
+            Math.max(
+                ...generationIndex.values()
+            );
+
+
+        const generations =
+            Array.from(
+                {
+                    length:
+                        maxGeneration + 1
+                },
+                () => []
+            );
+
+
+        generationIndex.forEach(
+            (
+                generation,
+                personId
+            ) => {
+
+                const person =
+                    nodeMap.get(
+                        personId
+                    );
+
+
+                if (person) {
+
+                    generations[
+                        generation
+                    ].push(person);
+
+                }
+
+            }
+        );
+
+
+        generations.forEach(
+            (generation) => {
+
+                generation.sort(
+                    (a, b) =>
+                        a.name.localeCompare(
+                            b.name
+                        )
+                );
+
+            }
+        );
+
+
+        return generations;
+
+    }
+
+
+    /* =====================================================
+       PERSON SELECTION
+    ===================================================== */
+
     function selectPerson(personId) {
 
-        if (!personOne || !personTwo) {
+        if (
+            !personOne ||
+            !personTwo ||
+            !personId
+        ) {
             return;
         }
 
@@ -204,6 +651,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             personTwo.value =
                 personId;
+
         }
 
 
@@ -215,26 +663,39 @@ document.addEventListener("DOMContentLoaded", () => {
     function highlightSelectedPeople() {
 
         const selected =
-            new Set([
-                personOne?.value,
-                personTwo?.value
-            ]);
-
-
-        treePeople.forEach((person) => {
-
-            const personId =
-                person.dataset.person;
-
-            person.classList.toggle(
-                "selected",
-                selected.has(personId)
+            new Set(
+                [
+                    personOne?.value,
+                    personTwo?.value
+                ].filter(Boolean)
             );
 
-        });
+
+        const graphPeople =
+            document.querySelectorAll(
+                ".tree-person"
+            );
+
+
+        graphPeople.forEach(
+            (person) => {
+
+                person.classList.toggle(
+                    "selected",
+                    selected.has(
+                        person.dataset.person
+                    )
+                );
+
+            }
+        );
 
     }
 
+
+    /* =====================================================
+       RELATIONSHIP DISCOVERY
+    ===================================================== */
 
     async function discoverRelationship() {
 
@@ -249,6 +710,7 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
             return;
+
         }
 
 
@@ -263,6 +725,7 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
             return;
+
         }
 
 
@@ -311,6 +774,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             console.error(error);
 
+
             showMessage(
                 "Kinship AI could not complete the relationship lookup.",
                 true
@@ -329,12 +793,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
+    /* =====================================================
+       RESULT STATES
+    ===================================================== */
+
     function showLoading() {
 
         relationshipResult.classList.remove(
             "empty",
             "error"
         );
+
 
         relationshipResult.innerHTML = `
             <div class="result-symbol">
@@ -347,7 +816,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 </h3>
 
                 <p>
-                    Checking symbolic family relationships...
+                    Evaluating symbolic family relationships...
                 </p>
             </div>
         `;
@@ -361,6 +830,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "empty",
             "error"
         );
+
 
         relationshipResult.innerHTML = `
             <div class="result-symbol">
@@ -393,9 +863,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         if (isError) {
+
             relationshipResult.classList.add(
                 "error"
             );
+
         }
 
 
@@ -406,7 +878,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             <div>
                 <h3>
-                    ${isError ? "Selection required" : "Kinship AI"}
+                    ${isError
+                        ? "Action required"
+                        : "Kinship AI"}
                 </h3>
 
                 <p>
@@ -418,18 +892,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    function escapeHtml(value) {
-
-        const div =
-            document.createElement("div");
-
-        div.textContent =
-            String(value);
-
-        return div.innerHTML;
-
-    }
-
+    /* =====================================================
+       SEARCH
+    ===================================================== */
 
     if (peopleSearch) {
 
@@ -452,13 +917,19 @@ document.addEventListener("DOMContentLoaded", () => {
                     );
 
 
-                renderPeople(filtered);
+                renderPeople(
+                    filtered
+                );
 
             }
         );
 
     }
 
+
+    /* =====================================================
+       EVENT LISTENERS
+    ===================================================== */
 
     if (personOne) {
 
@@ -490,22 +961,29 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    treePeople.forEach((person) => {
+    /* =====================================================
+       SECURITY
+    ===================================================== */
 
-        person.addEventListener(
-            "click",
-            () => {
+    function escapeHtml(value) {
 
-                selectPerson(
-                    person.dataset.person
-                );
+        const element =
+            document.createElement(
+                "div"
+            );
 
-            }
-        );
+        element.textContent =
+            String(value);
 
-    });
+        return element.innerHTML;
+
+    }
 
 
-    loadPeople();
+    /* =====================================================
+       INITIALIZE
+    ===================================================== */
+
+    loadExplorerData();
 
 });
