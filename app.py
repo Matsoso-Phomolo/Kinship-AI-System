@@ -3,6 +3,8 @@ from pyswip import Prolog
 import logging
 import os
 import re
+from typing import Any
+
 
 # =========================================================
 # APPLICATION CONFIGURATION
@@ -38,33 +40,33 @@ RELATIONSHIPS = {
     "parent": "parent_of",
     "father": "father_of",
     "mother": "mother_of",
-
     "child": "child_of",
     "son": "son_of",
     "daughter": "daughter_of",
-
     "sibling": "sibling_of",
     "brother": "brother_of",
     "sister": "sister_of",
-
     "grandparent": "grandparent_of",
     "grandfather": "grandfather_of",
     "grandmother": "grandmother_of",
-
     "grandchild": "grandchild_of",
     "grandson": "grandson_of",
     "granddaughter": "granddaughter_of",
-
     "uncle": "uncle_of",
     "aunt": "aunt_of",
-
     "niece": "niece_of",
     "nephew": "nephew_of",
-
     "cousin": "cousin_of",
-
     "ancestor": "ancestor_of",
     "descendant": "descendant_of",
+    "spouse": "spouse_of",
+    "former spouse": "former_spouse_of",
+    "step parent": "step_parent_of",
+    "step child": "step_child_of",
+    "step father": "step_father_of",
+    "step mother": "step_mother_of",
+    "older sibling": "older_sibling_of",
+    "younger sibling": "younger_sibling_of",
 }
 
 
@@ -72,74 +74,62 @@ PLURAL_RELATIONSHIPS = {
     "parents": "parent",
     "fathers": "father",
     "mothers": "mother",
-
     "children": "child",
     "sons": "son",
     "daughters": "daughter",
-
     "siblings": "sibling",
     "brothers": "brother",
     "sisters": "sister",
-
     "grandparents": "grandparent",
     "grandfathers": "grandfather",
     "grandmothers": "grandmother",
-
     "grandchildren": "grandchild",
     "grandsons": "grandson",
     "granddaughters": "granddaughter",
-
     "uncles": "uncle",
     "aunts": "aunt",
-
     "nieces": "niece",
     "nephews": "nephew",
-
     "cousins": "cousin",
-
     "ancestors": "ancestor",
     "descendants": "descendant",
+    "spouses": "spouse",
+    "former spouses": "former spouse",
+    "step parents": "step parent",
+    "step children": "step child",
+    "step fathers": "step father",
+    "step mothers": "step mother",
+    "older siblings": "older sibling",
+    "younger siblings": "younger sibling",
 }
 
 
-# Relationships where a normal family model usually expects
-# a single result.
-SINGULAR_RELATIONSHIPS = {
-    "father",
-    "mother",
-}
-
-
-# Order used by "How is X related to Y?"
-#
-# More specific relationships should come before generic ones.
 RELATIONSHIP_DISCOVERY_ORDER = [
     ("father", "father_of"),
     ("mother", "mother_of"),
-
     ("son", "son_of"),
     ("daughter", "daughter_of"),
-
     ("brother", "brother_of"),
     ("sister", "sister_of"),
-
     ("grandfather", "grandfather_of"),
     ("grandmother", "grandmother_of"),
-
     ("grandson", "grandson_of"),
     ("granddaughter", "granddaughter_of"),
-
     ("uncle", "uncle_of"),
     ("aunt", "aunt_of"),
-
     ("nephew", "nephew_of"),
     ("niece", "niece_of"),
-
     ("cousin", "cousin_of"),
-
+    ("spouse", "spouse_of"),
+    ("former spouse", "former_spouse_of"),
+    ("step father", "step_father_of"),
+    ("step mother", "step_mother_of"),
+    ("step parent", "step_parent_of"),
+    ("step child", "step_child_of"),
+    ("older sibling", "older_sibling_of"),
+    ("younger sibling", "younger_sibling_of"),
     ("ancestor", "ancestor_of"),
     ("descendant", "descendant_of"),
-
     ("parent", "parent_of"),
     ("child", "child_of"),
     ("sibling", "sibling_of"),
@@ -148,154 +138,323 @@ RELATIONSHIP_DISCOVERY_ORDER = [
 ]
 
 
-# =========================================================
-# NORMALIZATION
-# =========================================================
-
-def normalize_question(question):
-    if not question:
-        return ""
-
-    question = question.strip()
-
-    question = re.sub(
-        r"\s+",
-        " ",
-        question,
-    )
-
-    question = question.rstrip(
-        "?.! "
-    )
-
-    return question.lower()
-
-
-def normalize_name(name):
-    if not name:
-        return None
-
-    name = name.strip().lower()
-
-    # Current Prolog knowledge base uses simple lowercase atoms.
-    if not re.fullmatch(r"[a-z]+", name):
-        return None
-
-    return name
-
-
-def normalize_relation(relation):
-    if not relation:
-        return None
-
-    relation = relation.lower().strip()
-
-    if relation in RELATIONSHIPS:
-        return relation
-
-    return PLURAL_RELATIONSHIPS.get(
-        relation
-    )
-
-
-def display_name(name):
-    return (
-        str(name)
-        .replace("_", " ")
-        .title()
-    )
+GENERIC_RELATIONSHIPS = {
+    "parent",
+    "child",
+    "sibling",
+    "grandparent",
+    "grandchild",
+    "ancestor",
+    "descendant",
+    "step parent",
+    "step child",
+}
 
 
 # =========================================================
-# PROLOG EXECUTION
+# PROLOG HELPERS
 # =========================================================
 
-def query_prolog(query):
+def query_prolog(query: str) -> list[dict[str, Any]]:
     try:
-        return list(
-            prolog.query(query)
-        )
-
+        return list(prolog.query(query))
     except Exception:
-        logger.exception(
-            "Prolog query failed: %s",
-            query,
-        )
-
+        logger.exception("Prolog query failed: %s", query)
         return []
 
 
-def unique_result_names(
-    results,
-    variable="X",
-):
-    names = []
+def unique_result_values(
+    results: list[dict[str, Any]],
+    variable: str,
+) -> list[str]:
+    values: list[str] = []
 
     for result in results:
         if variable not in result:
             continue
 
-        value = str(
-            result[variable]
-        )
+        value = str(result[variable])
 
-        if value not in names:
-            names.append(value)
+        if value not in values:
+            values.append(value)
 
-    return names
+    return values
 
 
-def person_exists(name):
-    name = normalize_name(name)
+# =========================================================
+# TEXT NORMALIZATION
+# =========================================================
 
-    if not name:
+def normalize_question(question: str) -> str:
+    if not question:
+        return ""
+
+    question = question.strip()
+    question = re.sub(r"\s+", " ", question)
+    question = question.rstrip("?.! ")
+
+    return question
+
+
+def normalize_relation(relation: str) -> str | None:
+    relation = re.sub(
+        r"\s+",
+        " ",
+        relation.strip().lower(),
+    )
+
+    if relation in RELATIONSHIPS:
+        return relation
+
+    return PLURAL_RELATIONSHIPS.get(relation)
+
+
+def normalize_lookup_text(value: str) -> str:
+    value = value.strip().lower()
+
+    replacements = {
+        "’": "'",
+        "‘": "'",
+        "`": "'",
+        "´": "'",
+    }
+
+    for old, new in replacements.items():
+        value = value.replace(old, new)
+
+    value = re.sub(r"\s+", " ", value)
+
+    return value
+
+
+# =========================================================
+# PERSON METADATA
+# =========================================================
+
+def person_exists(person_id: str) -> bool:
+    if not person_id:
         return False
 
     return bool(
         query_prolog(
-            f"person({name})"
+            f"person({person_id})"
         )
     )
 
 
-# =========================================================
-# HUMAN-READABLE NAME FORMATTING
-# =========================================================
+def get_gender(person_id: str) -> str:
+    if query_prolog(f"male({person_id})"):
+        return "male"
 
-def get_title(name):
-    safe_name = normalize_name(
-        str(name)
+    if query_prolog(f"female({person_id})"):
+        return "female"
+
+    return "unknown"
+
+
+def get_display_name(person_id: str) -> str:
+    results = query_prolog(
+        f"display_name({person_id}, Name)"
     )
 
-    if not safe_name:
-        return display_name(name)
+    if results:
+        return str(results[0]["Name"])
 
-    if query_prolog(
-        f"male({safe_name})"
-    ):
+    return (
+        person_id
+        .replace("_", " ")
+        .title()
+    )
+
+
+def get_aliases(person_id: str) -> list[str]:
+    results = query_prolog(
+        f"alias({person_id}, Name)"
+    )
+
+    return unique_result_values(
+        results,
+        "Name",
+    )
+
+
+def get_former_names(person_id: str) -> list[str]:
+    results = query_prolog(
+        f"former_name({person_id}, Name)"
+    )
+
+    return unique_result_values(
+        results,
+        "Name",
+    )
+
+
+def get_title(person_id: str) -> str:
+    display = get_display_name(person_id)
+    gender = get_gender(person_id)
+
+    if gender == "male":
+        return f"Ntate {display}"
+
+    if gender == "female":
+        return f"Mme {display}"
+
+    return display
+
+
+def get_birth_order(person_id: str) -> int | None:
+    results = query_prolog(
+        f"birth_order({person_id}, Position)"
+    )
+
+    if not results:
+        return None
+
+    try:
+        return int(results[0]["Position"])
+    except (TypeError, ValueError):
+        return None
+
+
+# =========================================================
+# PERSON LOOKUP / DUPLICATE-NAME HANDLING
+# =========================================================
+
+def get_all_people() -> list[str]:
+    results = query_prolog("person(X)")
+
+    return sorted(
+        set(
+            unique_result_values(
+                results,
+                "X",
+            )
+        )
+    )
+
+
+def build_person_search_names(person_id: str) -> list[str]:
+    names = [
+        get_display_name(person_id),
+        *get_aliases(person_id),
+        *get_former_names(person_id),
+    ]
+
+    normalized = []
+
+    for name in names:
+        lookup = normalize_lookup_text(name)
+
+        if lookup not in normalized:
+            normalized.append(lookup)
+
+    return normalized
+
+
+def find_people_by_name(name: str) -> list[str]:
+    lookup = normalize_lookup_text(name)
+
+    if not lookup:
+        return []
+
+    matches = []
+
+    for person_id in get_all_people():
+        search_names = build_person_search_names(
+            person_id
+        )
+
+        if lookup in search_names:
+            matches.append(person_id)
+
+    return matches
+
+
+def person_context_label(person_id: str) -> str:
+    name = get_display_name(person_id)
+
+    mothers = unique_result_values(
+        query_prolog(
+            f"mother_of(X,{person_id})"
+        ),
+        "X",
+    )
+
+    fathers = unique_result_values(
+        query_prolog(
+            f"father_of(X,{person_id})"
+        ),
+        "X",
+    )
+
+    context = []
+
+    if mothers:
+        context.append(
+            "mother: "
+            + get_display_name(mothers[0])
+        )
+
+    if fathers:
+        context.append(
+            "father: "
+            + get_display_name(fathers[0])
+        )
+
+    former_names = get_former_names(
+        person_id
+    )
+
+    if former_names:
+        context.append(
+            "formerly "
+            + ", ".join(former_names)
+        )
+
+    if context:
         return (
-            f"Ntate "
-            f"{display_name(safe_name)}"
+            f"{name} ({'; '.join(context)})"
         )
 
-    if query_prolog(
-        f"female({safe_name})"
-    ):
-        return (
-            f"Mme "
-            f"{display_name(safe_name)}"
-        )
+    return name
 
-    return display_name(
-        safe_name
+
+def resolve_person_name(
+    raw_name: str,
+) -> tuple[str | None, str | None]:
+    matches = find_people_by_name(
+        raw_name
     )
 
+    if not matches:
+        return (
+            None,
+            f"{raw_name.strip()} is not recorded "
+            "in the current family knowledge base.",
+        )
+
+    if len(matches) > 1:
+        options = [
+            person_context_label(person_id)
+            for person_id in matches
+        ]
+
+        return (
+            None,
+            "More than one person is named "
+            f"{raw_name.strip()}. Please distinguish between: "
+            + "; ".join(options)
+            + ".",
+        )
+
+    return matches[0], None
+
 
 # =========================================================
-# ANSWER HELPERS
+# FORMATTING
 # =========================================================
 
-def join_names(names):
+def join_names(names: list[str]) -> str:
     if not names:
         return ""
 
@@ -303,10 +462,7 @@ def join_names(names):
         return names[0]
 
     if len(names) == 2:
-        return (
-            f"{names[0]} and "
-            f"{names[1]}"
-        )
+        return f"{names[0]} and {names[1]}"
 
     return (
         ", ".join(names[:-1])
@@ -315,76 +471,66 @@ def join_names(names):
 
 
 def pluralize_relationship(
-    relation,
-    count,
-):
+    relation: str,
+    count: int,
+) -> str:
     if count == 1:
         return relation
 
     special = {
         "child": "children",
         "person": "people",
+        "former spouse": "former spouses",
+        "step child": "step children",
+        "step parent": "step parents",
+        "older sibling": "older siblings",
+        "younger sibling": "younger siblings",
     }
 
     if relation in special:
         return special[relation]
 
     if relation.endswith("y"):
-        return (
-            relation[:-1]
-            + "ies"
-        )
+        return relation[:-1] + "ies"
 
     return relation + "s"
 
 
 def format_relationship_answer(
-    names,
-    person,
-    relation,
-):
-    person_display = get_title(person)
+    people: list[str],
+    target_person: str,
+    relation: str,
+) -> str:
+    target_name = get_title(
+        target_person
+    )
 
-    if not names:
+    if not people:
         return (
             f"No {relation} relationship was found "
-            f"for {person_display} in the current "
-            f"knowledge base."
+            f"for {target_name} in the current "
+            "knowledge base."
         )
 
     formatted = [
-        get_title(name)
-        for name in names
+        get_title(person_id)
+        for person_id in people
     ]
-
-    if (
-        relation
-        in SINGULAR_RELATIONSHIPS
-    ):
-        return (
-            f"{formatted[0]} is "
-            f"{person_display}'s "
-            f"{relation}."
-        )
 
     if len(formatted) == 1:
         return (
             f"{formatted[0]} is "
-            f"{person_display}'s "
-            f"{relation}."
+            f"{target_name}'s {relation}."
         )
 
-    relation_plural = (
-        pluralize_relationship(
-            relation,
-            len(formatted),
-        )
+    relation_plural = pluralize_relationship(
+        relation,
+        len(formatted),
     )
 
     return (
         f"{join_names(formatted)} are "
-        f"{person_display}'s "
-        f"{relation_plural}."
+        f"{target_name}'s {relation_plural}."
     )
 
 
@@ -393,128 +539,97 @@ def format_relationship_answer(
 # =========================================================
 
 def find_relationship(
-    relation,
-    person,
-):
+    relation: str,
+    person_name: str,
+) -> str:
     relation = normalize_relation(
         relation
-    )
-
-    person = normalize_name(
-        person
     )
 
     if not relation:
         return (
-            "That relationship is not currently "
-            "supported."
+            "That relationship is not currently supported."
         )
 
-    if not person:
-        return (
-            "That person's name could not "
-            "be processed."
-        )
-
-    if not person_exists(person):
-        return (
-            f"{display_name(person)} is not recorded "
-            f"in the current family knowledge base."
-        )
-
-    predicate = (
-        RELATIONSHIPS[
-            relation
-        ]
+    person_id, error = resolve_person_name(
+        person_name
     )
+
+    if error:
+        return error
+
+    predicate = RELATIONSHIPS[
+        relation
+    ]
 
     results = query_prolog(
-        f"{predicate}(X,{person})"
+        f"{predicate}(X,{person_id})"
     )
 
-    names = unique_result_names(
-        results
+    people = unique_result_values(
+        results,
+        "X",
     )
 
-    return (
-        format_relationship_answer(
-            names,
-            person,
-            relation,
-        )
+    return format_relationship_answer(
+        people,
+        person_id,
+        relation,
     )
 
 
 # =========================================================
-# YES / NO RELATIONSHIP CHECK
+# YES / NO VERIFICATION
 # =========================================================
 
 def verify_relationship(
-    person1,
-    relation,
-    person2,
-):
-    person1 = normalize_name(
-        person1
-    )
-
-    person2 = normalize_name(
-        person2
-    )
-
+    person1_name: str,
+    relation: str,
+    person2_name: str,
+) -> str:
     relation = normalize_relation(
         relation
     )
 
-    if not (
-        person1
-        and person2
-        and relation
-    ):
+    if not relation:
         return (
-            "I could not process that "
-            "relationship question."
+            "That relationship is not currently supported."
         )
 
-    if not person_exists(person1):
-        return (
-            f"{display_name(person1)} is not "
-            f"recorded in the current "
-            f"knowledge base."
-        )
-
-    if not person_exists(person2):
-        return (
-            f"{display_name(person2)} is not "
-            f"recorded in the current "
-            f"knowledge base."
-        )
-
-    predicate = (
-        RELATIONSHIPS[
-            relation
-        ]
+    person1, error1 = resolve_person_name(
+        person1_name
     )
 
+    if error1:
+        return error1
+
+    person2, error2 = resolve_person_name(
+        person2_name
+    )
+
+    if error2:
+        return error2
+
+    predicate = RELATIONSHIPS[
+        relation
+    ]
+
     result = query_prolog(
-        f"{predicate}"
-        f"({person1},{person2})"
+        f"{predicate}({person1},{person2})"
     )
 
     if result:
         return (
-            f"Yes. "
-            f"{get_title(person1)} is "
+            f"Yes. {get_title(person1)} is "
             f"{get_title(person2)}'s "
             f"{relation}."
         )
 
     return (
-        f"No. "
-        f"{get_title(person1)} is not "
+        f"No. {get_title(person1)} is not "
         f"{get_title(person2)}'s "
         f"{relation} according to the "
-        f"current knowledge base."
+        "current knowledge base."
     )
 
 
@@ -523,214 +638,179 @@ def verify_relationship(
 # =========================================================
 
 def discover_relationship(
-    person1,
-    person2,
-):
-    """
-    Discover how person1 relates to person2.
-
-    Example:
-        How is Jack related to Harry?
-
-    Kinship AI tests relationship predicates in a
-    specific order and returns all relationships
-    that can be logically proven.
-    """
-
-    person1 = normalize_name(
-        person1
+    person1_name: str,
+    person2_name: str,
+) -> str:
+    person1, error1 = resolve_person_name(
+        person1_name
     )
 
-    person2 = normalize_name(
-        person2
+    if error1:
+        return error1
+
+    person2, error2 = resolve_person_name(
+        person2_name
     )
 
-    if not person1 or not person2:
-        return (
-            "I could not process one or both names."
-        )
+    if error2:
+        return error2
 
     if person1 == person2:
         return (
-            f"{get_title(person1)} and "
-            f"{get_title(person2)} refer "
-            f"to the same person."
-        )
-
-    if not person_exists(person1):
-        return (
-            f"{display_name(person1)} is not "
-            f"recorded in the current "
-            f"knowledge base."
-        )
-
-    if not person_exists(person2):
-        return (
-            f"{display_name(person2)} is not "
-            f"recorded in the current "
-            f"knowledge base."
+            f"{get_title(person1)} refers "
+            "to the same person."
         )
 
     discovered = []
 
-    for (
-        relationship,
-        predicate,
-    ) in RELATIONSHIP_DISCOVERY_ORDER:
-
+    for relation, predicate in (
+        RELATIONSHIP_DISCOVERY_ORDER
+    ):
         result = query_prolog(
-            f"{predicate}"
-            f"({person1},{person2})"
+            f"{predicate}({person1},{person2})"
         )
 
         if result:
-            discovered.append(
-                relationship
-            )
+            discovered.append(relation)
 
     if not discovered:
         return (
             f"No supported relationship between "
             f"{get_title(person1)} and "
-            f"{get_title(person2)} could be "
-            f"proven from the current "
-            f"knowledge base."
+            f"{get_title(person2)} could be proven "
+            "from the current knowledge base."
         )
 
-    # Remove generic relationships when a more
-    # descriptive version is available.
-
-    filtering_rules = {
-        "parent": {
-            "father",
-            "mother",
-        },
-
-        "child": {
-            "son",
-            "daughter",
-        },
-
+    # Remove generic relationships when a more specific
+    # relationship is already known.
+    specificity = {
+        "parent": {"father", "mother"},
+        "child": {"son", "daughter"},
         "sibling": {
             "brother",
             "sister",
+            "older sibling",
+            "younger sibling",
         },
-
         "grandparent": {
             "grandfather",
             "grandmother",
         },
-
         "grandchild": {
             "grandson",
             "granddaughter",
         },
+        "step parent": {
+            "step father",
+            "step mother",
+        },
     }
 
-    final_relationships = []
+    filtered = []
 
     for relation in discovered:
-        more_specific = (
-            filtering_rules.get(
-                relation
-            )
-        )
-
-        if more_specific:
-            if any(
-                specific
-                in discovered
-                for specific
-                in more_specific
-            ):
-                continue
-
-        final_relationships.append(
+        specific_options = specificity.get(
             relation
         )
 
-    # When a direct relationship exists, ancestor /
-    # descendant are mathematically true but less useful
-    # to the user.
+        if specific_options and any(
+            option in discovered
+            for option in specific_options
+        ):
+            continue
 
-    direct_relationships = {
-        "father",
-        "mother",
-        "son",
-        "daughter",
-        "brother",
-        "sister",
-        "grandfather",
-        "grandmother",
-        "grandson",
-        "granddaughter",
-        "uncle",
-        "aunt",
-        "niece",
-        "nephew",
-        "cousin",
-    }
+        filtered.append(relation)
 
+    # Ancestor/descendant are valid but less useful if
+    # a direct relationship was found.
     if any(
-        relation
-        in direct_relationships
-        for relation
-        in final_relationships
+        relation not in {
+            "ancestor",
+            "descendant",
+        }
+        for relation in filtered
     ):
-        final_relationships = [
+        filtered = [
             relation
-            for relation
-            in final_relationships
-            if relation
-            not in {
+            for relation in filtered
+            if relation not in {
                 "ancestor",
                 "descendant",
             }
         ]
 
-    if len(final_relationships) == 1:
-        relation = (
-            final_relationships[0]
-        )
-
+    if len(filtered) == 1:
         return (
             f"{get_title(person1)} is "
             f"{get_title(person2)}'s "
-            f"{relation}."
+            f"{filtered[0]}."
         )
 
     return (
         f"{get_title(person1)} is related to "
         f"{get_title(person2)} as: "
-        f"{join_names(final_relationships)}."
+        f"{join_names(filtered)}."
     )
 
 
 # =========================================================
-# QUESTION PROCESSOR
+# PERSON PROFILE
 # =========================================================
 
-def process_question(question):
-    normalized = (
-        normalize_question(
-            question
-        )
+def build_person_profile(
+    person_id: str,
+) -> dict[str, Any]:
+    return {
+        "id": person_id,
+        "name": get_display_name(
+            person_id
+        ),
+        "title": get_title(
+            person_id
+        ),
+        "gender": get_gender(
+            person_id
+        ),
+        "aliases": get_aliases(
+            person_id
+        ),
+        "former_names": get_former_names(
+            person_id
+        ),
+        "birth_order": get_birth_order(
+            person_id
+        ),
+    }
+
+
+# =========================================================
+# NLP PARSER
+# =========================================================
+
+NAME_PATTERN = r"(.+?)"
+
+
+def process_question(question: str) -> str:
+    normalized = normalize_question(
+        question
     )
 
     if not normalized:
         return (
-            "Please enter a family "
-            "relationship question."
+            "Please enter a family relationship question."
         )
 
+    lower = normalized.lower()
 
-    # =====================================================
-    # HOW IS X RELATED TO Y?
-    # =====================================================
+
+    # -----------------------------------------------------
+    # How is X related to Y?
+    # -----------------------------------------------------
 
     match = re.fullmatch(
-        r"how is ([a-z]+) related to ([a-z]+)",
-        normalized,
+        rf"how is {NAME_PATTERN} related to {NAME_PATTERN}",
+        lower,
+        re.IGNORECASE,
     )
 
     if match:
@@ -740,14 +820,15 @@ def process_question(question):
         )
 
 
-    # =====================================================
-    # WHAT IS THE RELATIONSHIP BETWEEN X AND Y?
-    # =====================================================
+    # -----------------------------------------------------
+    # What is the relationship between X and Y?
+    # -----------------------------------------------------
 
     match = re.fullmatch(
-        r"what is the relationship between "
-        r"([a-z]+) and ([a-z]+)",
-        normalized,
+        rf"what is the relationship between "
+        rf"{NAME_PATTERN} and {NAME_PATTERN}",
+        lower,
+        re.IGNORECASE,
     )
 
     if match:
@@ -757,26 +838,26 @@ def process_question(question):
         )
 
 
-    # =====================================================
-    # WHO IS X'S RELATION?
+    # -----------------------------------------------------
+    # Who is X's relationship?
     #
-    # Who is Harry's father?
-    # Who is Harry's aunt?
-    # =====================================================
+    # Example:
+    # Who is Phomolo Matsoso's mother?
+    # -----------------------------------------------------
 
     match = re.fullmatch(
-        r"who is ([a-z]+)'s ([a-z]+)",
-        normalized,
+        rf"who is {NAME_PATTERN}'s "
+        rf"([a-z ]+)",
+        lower,
+        re.IGNORECASE,
     )
 
     if match:
         person = match.group(1)
         relation = match.group(2)
 
-        normalized_relation = (
-            normalize_relation(
-                relation
-            )
+        normalized_relation = normalize_relation(
+            relation
         )
 
         if normalized_relation:
@@ -786,80 +867,23 @@ def process_question(question):
             )
 
 
-    # =====================================================
-    # WHO IS THE RELATION OF X?
-    #
-    # Who is the father of Harry?
-    # =====================================================
+    # -----------------------------------------------------
+    # Who are X's relationships?
+    # -----------------------------------------------------
 
     match = re.fullmatch(
-        r"who is the ([a-z]+) of ([a-z]+)",
-        normalized,
-    )
-
-    if match:
-        relation = match.group(1)
-        person = match.group(2)
-
-        normalized_relation = (
-            normalize_relation(
-                relation
-            )
-        )
-
-        if normalized_relation:
-            return find_relationship(
-                normalized_relation,
-                person,
-            )
-
-
-    # =====================================================
-    # WHO IS RELATION OF X?
-    # =====================================================
-
-    match = re.fullmatch(
-        r"who is ([a-z]+) of ([a-z]+)",
-        normalized,
-    )
-
-    if match:
-        relation = match.group(1)
-        person = match.group(2)
-
-        normalized_relation = (
-            normalize_relation(
-                relation
-            )
-        )
-
-        if normalized_relation:
-            return find_relationship(
-                normalized_relation,
-                person,
-            )
-
-
-    # =====================================================
-    # WHO ARE X'S RELATIONS?
-    #
-    # Who are Harry's ancestors?
-    # Who are Harry's grandparents?
-    # =====================================================
-
-    match = re.fullmatch(
-        r"who are ([a-z]+)'s ([a-z]+)",
-        normalized,
+        rf"who are {NAME_PATTERN}'s "
+        rf"([a-z ]+)",
+        lower,
+        re.IGNORECASE,
     )
 
     if match:
         person = match.group(1)
         relation = match.group(2)
 
-        normalized_relation = (
-            normalize_relation(
-                relation
-            )
+        normalized_relation = normalize_relation(
+            relation
         )
 
         if normalized_relation:
@@ -869,26 +893,22 @@ def process_question(question):
             )
 
 
-    # =====================================================
-    # WHO ARE THE RELATIONS OF X?
-    #
-    # Who are the parents of Harry?
-    # Who are the ancestors of Harry?
-    # =====================================================
+    # -----------------------------------------------------
+    # Who is the relation of X?
+    # -----------------------------------------------------
 
     match = re.fullmatch(
-        r"who are the ([a-z]+) of ([a-z]+)",
-        normalized,
+        rf"who is the ([a-z ]+) of {NAME_PATTERN}",
+        lower,
+        re.IGNORECASE,
     )
 
     if match:
         relation = match.group(1)
         person = match.group(2)
 
-        normalized_relation = (
-            normalize_relation(
-                relation
-            )
+        normalized_relation = normalize_relation(
+            relation
         )
 
         if normalized_relation:
@@ -898,28 +918,22 @@ def process_question(question):
             )
 
 
-    # =====================================================
-    # LIST RELATIONS OF X
-    #
-    # List children of Jack
-    # List all descendants of Jack
-    # List the grandchildren of Jack
-    # =====================================================
+    # -----------------------------------------------------
+    # Who are the relations of X?
+    # -----------------------------------------------------
 
     match = re.fullmatch(
-        r"list(?: all)?(?: the)? "
-        r"([a-z]+) of ([a-z]+)",
-        normalized,
+        rf"who are the ([a-z ]+) of {NAME_PATTERN}",
+        lower,
+        re.IGNORECASE,
     )
 
     if match:
         relation = match.group(1)
         person = match.group(2)
 
-        normalized_relation = (
-            normalize_relation(
-                relation
-            )
+        normalized_relation = normalize_relation(
+            relation
         )
 
         if normalized_relation:
@@ -929,18 +943,42 @@ def process_question(question):
             )
 
 
-    # =====================================================
-    # IS X A/THE RELATION OF Y?
-    #
-    # Is Lily the mother of Harry?
-    # Is Jack an ancestor of Harry?
-    # =====================================================
+    # -----------------------------------------------------
+    # List relations of X
+    # -----------------------------------------------------
 
     match = re.fullmatch(
-        r"is ([a-z]+) "
-        r"(?:a|an|the) "
-        r"([a-z]+) of ([a-z]+)",
-        normalized,
+        rf"list(?: all)?(?: the)? "
+        rf"([a-z ]+) of {NAME_PATTERN}",
+        lower,
+        re.IGNORECASE,
+    )
+
+    if match:
+        relation = match.group(1)
+        person = match.group(2)
+
+        normalized_relation = normalize_relation(
+            relation
+        )
+
+        if normalized_relation:
+            return find_relationship(
+                normalized_relation,
+                person,
+            )
+
+
+    # -----------------------------------------------------
+    # Is X the/a/an relation of Y?
+    # -----------------------------------------------------
+
+    match = re.fullmatch(
+        rf"is {NAME_PATTERN} "
+        rf"(?:a|an|the) "
+        rf"([a-z ]+) of {NAME_PATTERN}",
+        lower,
+        re.IGNORECASE,
     )
 
     if match:
@@ -951,17 +989,16 @@ def process_question(question):
         )
 
 
-    # =====================================================
-    # IS X Y'S RELATION?
-    #
-    # Is Lily Harry's mother?
-    # =====================================================
+    # -----------------------------------------------------
+    # Is X Y's relation?
+    # -----------------------------------------------------
 
     match = re.fullmatch(
-        r"is ([a-z]+) "
-        r"([a-z]+)'s "
-        r"([a-z]+)",
-        normalized,
+        rf"is {NAME_PATTERN} "
+        rf"{NAME_PATTERN}'s "
+        rf"([a-z ]+)",
+        lower,
+        re.IGNORECASE,
     )
 
     if match:
@@ -972,39 +1009,65 @@ def process_question(question):
         )
 
 
-    # =====================================================
-    # FALLBACK
-    # =====================================================
+    # -----------------------------------------------------
+    # Who is married to X?
+    # -----------------------------------------------------
+
+    match = re.fullmatch(
+        rf"who is married to {NAME_PATTERN}",
+        lower,
+        re.IGNORECASE,
+    )
+
+    if match:
+        return find_relationship(
+            "spouse",
+            match.group(1),
+        )
+
+
+    # -----------------------------------------------------
+    # Who was married to X?
+    # -----------------------------------------------------
+
+    match = re.fullmatch(
+        rf"who was married to {NAME_PATTERN}",
+        lower,
+        re.IGNORECASE,
+    )
+
+    if match:
+        return find_relationship(
+            "former spouse",
+            match.group(1),
+        )
+
 
     return (
         "I could not understand that question yet. "
         "Try questions such as "
-        "\"Who are the parents of Harry?\", "
-        "\"Who is Harry's grandmother?\", "
-        "\"Who are Jack's descendants?\", "
-        "\"Is Lily the mother of Harry?\", or "
-        "\"How is Jack related to Harry?\""
+        "\"Who is Phomolo Matsoso's mother?\", "
+        "\"Who are Phomolo Matsoso's siblings?\", "
+        "\"Who is the grandfather of Phomolo Matsoso?\", "
+        "\"How is Phomolo Matsoso related to Moleleki Matsoso?\", "
+        "\"Who is married to Nkujoana Matsoso?\", or "
+        "\"Is Moleleki Matsoso an ancestor of Phomolo Matsoso?\""
     )
 
 
 # =========================================================
-# HOME PAGE
+# WEB PAGE ROUTES
 # =========================================================
 
 @app.route(
     "/",
-    methods=[
-        "GET",
-        "POST",
-    ],
+    methods=["GET", "POST"],
 )
 def index():
-
     answer = ""
     question = ""
 
     if request.method == "POST":
-
         question = (
             request.form.get(
                 "question",
@@ -1015,22 +1078,18 @@ def index():
 
         if not question:
             answer = (
-                "Please enter a family "
-                "relationship question."
+                "Please enter a family relationship question."
             )
 
-        elif len(question) > 250:
+        elif len(question) > 300:
             answer = (
                 "Your question is too long. "
-                "Please use 250 characters "
-                "or fewer."
+                "Please use 300 characters or fewer."
             )
 
         else:
-            answer = (
-                process_question(
-                    question
-                )
+            answer = process_question(
+                question
             )
 
     return render_template(
@@ -1040,13 +1099,14 @@ def index():
     )
 
 
-# =========================================================
-# FAMILY EXPLORER
-# =========================================================
-
-@app.route("/explorer", methods=["GET"])
+@app.route(
+    "/explorer",
+    methods=["GET"],
+)
 def explorer():
-    return render_template("explorer.html")
+    return render_template(
+        "explorer.html"
+    )
 
 
 # =========================================================
@@ -1058,54 +1118,51 @@ def explorer():
     methods=["GET"],
 )
 def api_people():
+    people = [
+        build_person_profile(person_id)
+        for person_id in get_all_people()
+    ]
 
-    results = query_prolog(
-        "person(X)"
+    people.sort(
+        key=lambda person:
+        person["name"].lower()
     )
-
-    people = unique_result_names(
-        results
-    )
-
-    people = sorted(
-        set(people)
-    )
-
-    response = []
-
-    for person in people:
-
-        gender = "unknown"
-
-        if query_prolog(
-            f"male({person})"
-        ):
-            gender = "male"
-
-        elif query_prolog(
-            f"female({person})"
-        ):
-            gender = "female"
-
-        response.append(
-            {
-                "id": person,
-                "name": display_name(
-                    person
-                ),
-                "title": get_title(
-                    person
-                ),
-                "gender": gender,
-            }
-        )
 
     return jsonify(
         {
-            "count": len(response),
-            "people": response,
+            "count": len(people),
+            "people": people,
         }
     )
+
+
+# =========================================================
+# API — PERSON PROFILE
+# =========================================================
+
+@app.route(
+    "/api/people/<person_id>",
+    methods=["GET"],
+)
+def api_person(person_id: str):
+    if not person_exists(
+        person_id
+    ):
+        return jsonify(
+            {
+                "error": "person_not_found",
+                "message": (
+                    "That person does not exist "
+                    "in the knowledge base."
+                ),
+            }
+        ), 404
+
+    profile = build_person_profile(
+        person_id
+    )
+
+    return jsonify(profile)
 
 
 # =========================================================
@@ -1117,59 +1174,18 @@ def api_people():
     methods=["GET"],
 )
 def api_graph():
+    nodes = [
+        build_person_profile(person_id)
+        for person_id in get_all_people()
+    ]
 
-    person_results = query_prolog(
-        "person(X)"
-    )
-
-    people = sorted(
-        set(
-            unique_result_names(
-                person_results
-            )
-        )
-    )
-
-    nodes = []
-
-    for person in people:
-
-        gender = "unknown"
-
-        if query_prolog(
-            f"male({person})"
-        ):
-            gender = "male"
-
-        elif query_prolog(
-            f"female({person})"
-        ):
-            gender = "female"
-
-        nodes.append(
-            {
-                "id": person,
-                "name": display_name(
-                    person
-                ),
-                "title": get_title(
-                    person
-                ),
-                "gender": gender,
-            }
-        )
-
-
-    edge_results = query_prolog(
-        "graph_edge(Parent,Child)"
-    )
-
-    edges = []
+    biological_edges = []
 
     seen_edges = set()
 
-    for result in edge_results:
-
+    for result in query_prolog(
+        "graph_edge(Parent,Child)"
+    ):
         if (
             "Parent" not in result
             or "Child" not in result
@@ -1185,6 +1201,7 @@ def api_graph():
         )
 
         edge_key = (
+            "parent",
             parent,
             child,
         )
@@ -1196,11 +1213,81 @@ def api_graph():
             edge_key
         )
 
-        edges.append(
+        biological_edges.append(
             {
                 "source": parent,
                 "target": child,
                 "relationship": "parent",
+                "type": "biological",
+            }
+        )
+
+
+    marriage_edges = []
+
+    marriage_seen = set()
+
+    for result in query_prolog(
+        "marriage_edge(Person1,Person2)"
+    ):
+        if (
+            "Person1" not in result
+            or "Person2" not in result
+        ):
+            continue
+
+        person1 = str(
+            result["Person1"]
+        )
+
+        person2 = str(
+            result["Person2"]
+        )
+
+        unordered = tuple(
+            sorted(
+                [person1, person2]
+            )
+        )
+
+        if unordered in marriage_seen:
+            continue
+
+        marriage_seen.add(
+            unordered
+        )
+
+        marriage_edges.append(
+            {
+                "source": person1,
+                "target": person2,
+                "relationship": "spouse",
+                "type": "marriage",
+            }
+        )
+
+
+    step_edges = []
+
+    for result in query_prolog(
+        "step_edge(StepParent,StepChild)"
+    ):
+        if (
+            "StepParent" not in result
+            or "StepChild" not in result
+        ):
+            continue
+
+        step_edges.append(
+            {
+                "source": str(
+                    result["StepParent"]
+                ),
+                "target": str(
+                    result["StepChild"]
+                ),
+                "relationship": "step_parent",
+                "type": "step",
             }
         )
 
@@ -1208,15 +1295,23 @@ def api_graph():
     return jsonify(
         {
             "nodes": nodes,
-            "edges": edges,
+            "edges": biological_edges,
+            "marriage_edges": marriage_edges,
+            "step_edges": step_edges,
             "node_count": len(nodes),
-            "edge_count": len(edges),
+            "edge_count": len(biological_edges),
+            "marriage_edge_count": len(
+                marriage_edges
+            ),
+            "step_edge_count": len(
+                step_edges
+            ),
         }
     )
 
 
 # =========================================================
-# API — ASK
+# API — ASK AI
 # =========================================================
 
 @app.route(
@@ -1224,7 +1319,6 @@ def api_graph():
     methods=["POST"],
 )
 def api_ask():
-
     data = (
         request.get_json(
             silent=True
@@ -1242,24 +1336,20 @@ def api_ask():
     if not question:
         return jsonify(
             {
-                "error": (
-                    "question_required"
-                ),
+                "error": "question_required",
                 "message": (
                     "A question is required."
                 ),
             }
         ), 400
 
-    if len(question) > 250:
+    if len(question) > 300:
         return jsonify(
             {
-                "error": (
-                    "question_too_long"
-                ),
+                "error": "question_too_long",
                 "message": (
                     "Questions are limited "
-                    "to 250 characters."
+                    "to 300 characters."
                 ),
             }
         ), 400
@@ -1273,6 +1363,9 @@ def api_ask():
             "question": question,
             "answer": answer,
             "engine": "SWI-Prolog",
+            "knowledge_base": (
+                "Leloko la Ntate Moleleki Matsoso"
+            ),
         }
     )
 
@@ -1282,25 +1375,91 @@ def api_ask():
 # =========================================================
 
 @app.route(
-    "/api/relationship/"
-    "<person1>/<person2>",
+    "/api/relationship/<person1>/<person2>",
     methods=["GET"],
 )
 def api_relationship(
-    person1,
-    person2,
+    person1: str,
+    person2: str,
 ):
+    if (
+        person_exists(person1)
+        and person_exists(person2)
+    ):
+        result = discover_relationship(
+            get_display_name(person1),
+            get_display_name(person2),
+        )
 
-    result = discover_relationship(
-        person1,
-        person2,
-    )
+    else:
+        result = discover_relationship(
+            person1,
+            person2,
+        )
 
     return jsonify(
         {
             "person1": person1,
             "person2": person2,
             "result": result,
+        }
+    )
+
+
+# =========================================================
+# API — NAME SEARCH
+# =========================================================
+
+@app.route(
+    "/api/search",
+    methods=["GET"],
+)
+def api_search():
+    query = (
+        request.args.get(
+            "q",
+            ""
+        )
+        .strip()
+    )
+
+    if not query:
+        return jsonify(
+            {
+                "count": 0,
+                "results": [],
+            }
+        )
+
+    normalized_query = (
+        normalize_lookup_text(
+            query
+        )
+    )
+
+    matches = []
+
+    for person_id in get_all_people():
+        search_names = (
+            build_person_search_names(
+                person_id
+            )
+        )
+
+        if any(
+            normalized_query in name
+            for name in search_names
+        ):
+            matches.append(
+                build_person_profile(
+                    person_id
+                )
+            )
+
+    return jsonify(
+        {
+            "count": len(matches),
+            "results": matches,
         }
     )
 
@@ -1314,9 +1473,8 @@ def api_relationship(
     methods=["GET"],
 )
 def health():
-
     try:
-        test_result = query_prolog(
+        people = query_prolog(
             "person(X)"
         )
 
@@ -1324,17 +1482,25 @@ def health():
             {
                 "status": "healthy",
                 "service": "Kinship AI",
-                "reasoning_engine": (
-                    "SWI-Prolog"
+                "reasoning_engine": "SWI-Prolog",
+                "knowledge_base": (
+                    "Leloko la Ntate Moleleki Matsoso"
                 ),
-                "knowledge_base_loaded": (
-                    bool(test_result)
+                "knowledge_base_loaded": bool(
+                    people
+                ),
+                "people_count": len(
+                    set(
+                        unique_result_values(
+                            people,
+                            "X",
+                        )
+                    )
                 ),
             }
         ), 200
 
     except Exception:
-
         logger.exception(
             "Health check failed."
         )
@@ -1353,7 +1519,6 @@ def health():
 
 @app.errorhandler(404)
 def not_found(error):
-
     return jsonify(
         {
             "error": "not_found",
@@ -1367,16 +1532,13 @@ def not_found(error):
 
 @app.errorhandler(500)
 def internal_error(error):
-
     logger.exception(
-        "Unhandled Kinship AI error."
+        "Unhandled Kinship AI application error."
     )
 
     return jsonify(
         {
-            "error": (
-                "internal_server_error"
-            ),
+            "error": "internal_server_error",
             "message": (
                 "Kinship AI could not "
                 "complete the request."
@@ -1390,7 +1552,6 @@ def internal_error(error):
 # =========================================================
 
 if __name__ == "__main__":
-
     port = int(
         os.environ.get(
             "PORT",
@@ -1402,7 +1563,8 @@ if __name__ == "__main__":
         os.environ.get(
             "FLASK_DEBUG",
             "false",
-        ).lower()
+        )
+        .lower()
         == "true"
     )
 
